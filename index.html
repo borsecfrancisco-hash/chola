@@ -24,6 +24,10 @@
             init: function () {
                 const videoElement = document.querySelector('#arVideo');
                 const texture = new THREE.VideoTexture(videoElement);
+                
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+
                 this.el.getObject3D('mesh').material = new THREE.ShaderMaterial({
                     uniforms: {
                         u_texture: { value: texture },
@@ -67,7 +71,7 @@
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
         <a-entity id="paint-target" mindar-image-target="targetIndex: 0">
-            <a-plane width="1" height="1" position="0 0 0" chromakey="color: #12e310"></a-plane>
+            <a-plane id="video-plane" width="1" height="1" position="0 0 0" chromakey="color: #12e310"></a-plane>
         </a-entity>
     </a-scene>
 
@@ -75,9 +79,37 @@
         const btn = document.getElementById('btn-start');
         const video = document.getElementById('arVideo');
         const sceneEl = document.querySelector('a-scene');
+        const videoPlane = document.getElementById('video-plane');
+
+        // MODIFICA ESTE VALOR PARA AGRANDAR O ACHICAR EL VIDEO
+        // 1.0 = Tamaño original del target | 2.5 = Dos veces y media más grande
+        const multiplicadorEscala = 2.5;
+
+        // Función para ajustar las dimensiones físicas del plano según el video nativo y la escala deseada
+        function ajustarAspectRatio() {
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+                const aspectRatio = video.videoWidth / video.videoHeight;
+                
+                if (aspectRatio >= 1) {
+                    // Video horizontal
+                    videoPlane.setAttribute('width', 1 * multiplicadorEscala);
+                    videoPlane.setAttribute('height', (1 / aspectRatio) * multiplicadorEscala);
+                } else {
+                    // Video vertical
+                    videoPlane.setAttribute('width', aspectRatio * multiplicadorEscala);
+                    videoPlane.setAttribute('height', 1 * multiplicadorEscala);
+                }
+            }
+        }
+
+        // Escuchar cuando el navegador obtiene las dimensiones reales del archivo de video
+        video.addEventListener('loadedmetadata', ajustarAspectRatio);
+        
+        if (video.readyState >= 1) {
+            ajustarAspectRatio();
+        }
 
         btn.addEventListener('click', () => {
-            // Iniciamos el sistema con parámetros de resolución manual para buscar más nitidez
             sceneEl.systems["mindar-image-system"].start();
             video.play();
             btn.style.display = 'none';
